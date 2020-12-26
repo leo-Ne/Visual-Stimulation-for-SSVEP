@@ -139,12 +139,13 @@ class GUI:
                 self.addStimuls(position[0],position[1],lightness,size)
                 index[i] = (index[i] + 1) % len(stayTimeMatrix[i])
             # display canvas on screen
+            """" Here is time-synchronization problem """
             cv.imshow(outWin, self._canvas)
-            if cv.waitKey(stayTime) & 0xFF == ord('q'):
+            if cv.waitKey(1000) & 0xFF == ord('q'):
                 print("Stimulating stopped!")
                 break
             # clear buffer
-            self._canvas = np.zeros_like(canvas)
+#            self._canvas = np.zeros_like(canvas)
         pass
 
 def unitTest():
