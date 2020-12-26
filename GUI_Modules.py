@@ -28,10 +28,7 @@ class GUI:
         self._colorSpace     = r'RGB'
         self._canvas         = None
         self._displayType    = screenType
-        self._stimulusSeries = {
-                'lightnessSeries' : None,
-                'timeSeries'      : None
-            }
+        self._stimulusSeries = {'nStimulus' : 0}
         # Initial assignment for Class properties
         display        = tk.Tk()
         display_width  = display.winfo_screenwidth()
@@ -64,29 +61,40 @@ class GUI:
         del canvas, x, y, RGB
         return
 
-    def creatStimulusSeries(self, stiFreq=10.0, dutyfactor=0.5, alterType=None):
+    def creatStimulusSeries(self, position, size, stiFreq=10.0, dutyfactor=0.5, alterType=None):
         """
         lFrame means the mounts of the pictures inclued in one stimulus.
         This function will create a sequence of lightness. The lightness sequence should be used in method addStimuls().
         """
+        stimulusSeries  = self._stimulusSeries.copy()
         tLight          = dutyfactor / stiFreq
         tPeriod         = 1.0 / stiFreq
         tDark           = tPeriod - tLight
         lightness       = 255
         lightnessSeries = [255, 0]
         timeSeries      = [tLight, tDark]
-        self._stimulusSeries['lightnessSeries'] = lightnessSeries.copy()
-        self._stimulusSeries['timeSeries']      = timeSeries.copy()
-        # create stimulus block
-        return tLight, tPeriod, lightness
+        position        = position
+        size            = size
+        stimulus        = {
+                'timeSeries'     : timeSeries,
+                'lightnessSeries': lightnessSeries,
+                'position'       : position,
+                'size'           : size
+                         }
+        stimulusName                = stimulusSeries['nStimulus']
+        stimulusSeries['nStimulus'] = stimulusName + 1
+        stimulusSeries.update({stimulusName: stimulus})
+        self._stimulusSeries        = stimulusSeries.copy()
+        del stimulusSeries, tLight, tPeriod, tDark, lightness, lightnessSeries, timeSeries, position, size, stimulus
+        return 
 
     def displayGUI(self):
         height          = self._screenWidth
         width           = self._screenWidth
         canvas          = self._canvas.copy()
-        lightnessSeries = self._stimulusSeries['lightnessSeries'].copy()
-        timeSeries      = self._stimulusSeries['timeSeries'].copy()
+        stimulusSeries  = self._stimulusSeries.copy()
         # default setting: dispaly UI occuping the screen
+        print("Initializing GUI....")
         displayType = self._displayType
         windowFlag  = cv.WINDOW_FULLSCREEN
         if displayType == 'float':
@@ -94,33 +102,57 @@ class GUI:
         outWin = r'UI window'
         cv.namedWindow(outWin,cv.WINDOW_NORMAL)
         cv.setWindowProperty(outWin,cv.WINDOW_NORMAL, windowFlag)
-        # key to close the UI
         cv.imshow(outWin, canvas)
-        # time command
-        index = 0
-        lightness = lightnessSeries[index]
-        stayTime  = timeSeries[index]
+        # Load the stimuluses
+        print("Loading Stimulues...")
+        keys = list(stimulusSeries.keys())
+        keys.remove('nStimulus')
+        index = np.zeros([stimulusSeries['nStimulus']], np.int32)
+        lightnessMatrix = []
+        stayTimeMatrix  = []
+        positionMatrix  = []
+        sizeMatrix      = []
+        for key in keys:
+            stimulus = stimulusSeries[key]
+            lightnessMatrix.append(stimulus['lightnessSeries'])
+            stayTimeMatrix.append(stimulus['timeSeries'])
+            positionMatrix.append(stimulus['position'])
+            sizeMatrix.append(stimulus['size'])
+        nStimulus = len(keys)
+        del keys, stimulusSeries
+        #### debug codes, suggest that not delete it ###
+        print("Loaded Stimulues:")
+        for i in range(nStimulus):
+            print('\t', i, 
+                    '\tposition:',        positionMatrix[i], 
+                    '\tsize:',            sizeMatrix[i],
+                    '\tlightnessSeries:', lightnessMatrix[i],
+                    '\ttimeSeries:',      stayTimeMatrix[i])
+        ### output stimulus to screen ###
         while True:
-            lightness = lightnessSeries[index]
-            stayTime  = timeSeries[index]
-            stayTime  = int(stayTime * 1000)
-            self.addStimuls(40, 40, lightness)
-#            if index == 0:
-#                canvas = np.ones([height, width, 3], np.uint8) * 255
-#            elif index == 1:
-#                canvas = np.ones([height, width, 3], np.uint8) * 10
+            for i in range(nStimulus):
+                idx       = index[i]
+                lightness = lightnessMatrix[i][idx]
+                stayTime  = int(stayTimeMatrix[i][idx] * 1000)
+                position  = positionMatrix[i]
+                size      = sizeMatrix[i]
+                self.addStimuls(position[0],position[1],lightness,size)
+                index[i] = (index[i] + 1) % len(stayTimeMatrix[i])
+            # display canvas on screen
             cv.imshow(outWin, self._canvas)
             if cv.waitKey(stayTime) & 0xFF == ord('q'):
                 print("Stimulating stopped!")
                 break
-            # next stimulus frame
-            index = (index + 1) % 2
+            # clear buffer
+            self._canvas = np.zeros_like(canvas)
         pass
 
 def unitTest():
-    gui = GUI(screenType='float',screenHeight=200,screenWidth=200)
-#    gui.addStimuls(40, 40, 100)
-    gui.creatStimulusSeries(60.0,0.5)
+    gui = GUI(screenType='full',screenHeight=200,screenWidth=200)
+    gui.creatStimulusSeries([40, 40], None, 0.5, 0.5)
+    gui.creatStimulusSeries([160, 160], None, 4.0, 0.5)
+    gui.creatStimulusSeries([360, 360], None, 20.0, 0.5)
+#    gui.creatStimulusSeries(60.0,0.5)
     gui.displayGUI()
     return 
 
