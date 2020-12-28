@@ -58,13 +58,12 @@ class GUI:
         x      = x_position
         y      = y_position
         RGB    = (lightness, lightness, lightness)
-#        print('<addStimuls()>, lightness:', lightness)
         cv.rectangle(canvas,(x, y), (x+size, y+size),RGB, -1)
         self._canvas = canvas
         del canvas, x, y, RGB
         return
 
-    def creatStimulusSeries(self, position, size, stiFreq=10.0, dutyfactor=0.5, tBegin=0.001, frameStep=1):
+    def creatStimulusSeries(self, position, size, stiFreq=10.0, dutyfactor=0.5, tBegin=0.001):
         """
         lFrame means the mounts of the pictures inclued in one stimulus.
         This function will create a sequence of lightness. The lightness sequence should be used in method addStimuls().
@@ -81,7 +80,6 @@ class GUI:
         position        = position
         size            = size
         tBegin          = int(1000 * tBegin)
-#        frameStep       = int(1000.0 / self._refreshRate + 0.5) 
         stimulus        = {
                 'timeSeries'     : timeSeries,
                 'lightnessSeries': lightnessSeries,
@@ -144,11 +142,11 @@ class GUI:
                     '\n\tlightnessSeries:', lightnessMatrix[i],
                     '\n\ttimeSeries:',stayTimeMatrix[i])
         ### output stimulus to screen ###
-        # start clock counter, meansurement:ms
         tStart = time.perf_counter_ns() 
         while True:
+            # Initialize the canvas buffer
             tCurrent = int((time.perf_counter_ns() - tStart) / 10e6)
-
+            self._canvas = np.zeros_like(canvas)
             # write stimuluses into screen buffer.
             for i in range(nStimulus):
                 tBegin    = tBeginVector[i]
@@ -164,29 +162,25 @@ class GUI:
                     self.addStimuls(position[0],position[1],lightness,size)
                     if frameStepCnt < stayTime:
                         frameStepCnt += 1
-#                        print('frameStepCnt:', frameStepCnt)
                     else:
                         frameStepCnt = 0
                         index[i] = (index[i] + 1) % len(stayTimeMatrix[i])    # next stayTime value, next series frame
                     frameStepCntVector[i] = frameStepCnt
-#                    print('tCurrent:',tCurrent, 'frameStepCnt:',frameStepCnt, 'framePeriod:', frameStepCnt*framePeriod)
             
             # display canvas on screen
-            """" Here is time-synchronization problem """
             cv.imshow(outWin, self._canvas)
-            if cv.waitKey(framePeriod) & 0xFF == ord('q'):
-                print("Stimulating stopped!")
-                break
-            # clear buffer
-#            self._canvas = np.zeros_like(canvas)
+            cnt0 = 0
+            while cnt0 < framePeriod:
+                cnt0 += 1
+                if cv.waitKey(1) & 0xFF == ord('q'):
+                    print("Stimulating stopped!")
+                    exit('Quit:<keycode q to quit>')
         pass
 
 def unitTest():
     gui = GUI(screenType='float',screenHeight=200,screenWidth=200)
-#    gui.creatStimulusSeries([40, 40], None, 0.5, 0.5)
     gui.creatStimulusSeries([100, 100], None, 4.0, 0.5)
-    gui.creatStimulusSeries([60, 60], None, 10.0, 0.5)
-#    gui.creatStimulusSeries(60.0,0.5)
+    gui.creatStimulusSeries([60, 60], None, 60.0, 0.5)
     gui.displayGUI()
     return 
 
