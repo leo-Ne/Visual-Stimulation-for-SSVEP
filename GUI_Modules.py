@@ -16,13 +16,14 @@ class GUI:
     """
     This test code was programmed in Linux system, of which monitor has a 60Hz refresh.
     """
-    def __init__(self, screenType='full', screenHeight=400, screenWidth=600, monitorRate=60):
+    def __init__(self,tRun=10.0, screenType='full', screenHeight=400, screenWidth=600, monitorRate=60):
         """
         screenType: 
             'full': means occuping whole screen.
             'float': means creat a floating window.
         """
         # Class properties.
+        self._tRun           = int(tRun * 1000)
         self._refreshRate    = monitorRate
         self._framePeriod    = int(1000.0 / monitorRate + 0.5)   # meansurement: ms
         self._screenWidth    = None
@@ -61,6 +62,10 @@ class GUI:
             stiFreq=10.0, amp=255, offset=0, tBegin=0.001, stimulusName=None):
         self._stimulus.createStimulusSinWave(position,size,stiFreq,amp,offset,tBegin,stimulusName)
         return 
+
+    def showStimulusInfo(self, stimulusName=None):
+        self._stimulus.showStimulusInfo(stimulusName)
+        return
 
     def addStimuls(self, x_position, y_position, lightness, size=None):
         """
@@ -118,14 +123,16 @@ class GUI:
         nStimulus = len(keys)
         del keys, stimulusSeries
         #### debug codes, suggest that not delete it ###
-        print("Loaded Stimulues:")
-        ### output stimulus to screen ###
         tStart = time.perf_counter_ns() 
         while True:
             # Initialize the canvas buffer
             tCurrent = int((time.perf_counter_ns() - tStart) / 1e6)
+            inputKey = cv.waitKey(1) & 0xFF
             print("\rtCurrent:", tCurrent, 'ms.', flush=True, end='')
             self._canvas = np.zeros_like(canvas)
+            if self._tRun > 0 and tCurrent >= self._tRun and inputKey != ord(quitKey):
+                cv.imshow(outWin, self._canvas)
+                continue
             # write stimuluses into screen buffer.
             for i in range(nStimulus):
                 tBegin    = tBeginVector[i]
@@ -138,7 +145,6 @@ class GUI:
                     lightness    = lightnessMatrix[i][idx]
                     position     = positionMatrix[i]
                     size         = sizeMatrix[i]
-                    print(position, lightness, size)
                     self.addStimuls(position[0],position[1],lightness,size)
                     if frameStepCnt < stayTime:
                         frameStepCnt += 1
@@ -151,13 +157,13 @@ class GUI:
             cnt0 = 0
             while cnt0 < framePeriod:
                 cnt0 += 1
-                if cv.waitKey(1) & 0xFF == ord(quitKey):
+                if inputKey == ord(quitKey):
                     print("Stimulating stopped!")
                     exit('Quit:<keycode '+quitKey+' to quit>')
         pass
 
 def unitTest():
-    gui = GUI(screenType='float',screenHeight=200,screenWidth=200)
+    gui = GUI(tRun=-1.0, screenType='float',screenHeight=200,screenWidth=200)
     gui.createStimulusSquareWave(
             position=[10,10],
             size=10,
@@ -176,7 +182,47 @@ def unitTest():
     gui.displayGUI('q')
     return 
 
+def demo():
+    freq = [8., 9., 10., 11., 12., 13.]
+    position1 = []
+    position2 = []
+    width    = 1920
+    height   = 1080
+    nFreq    = len(freq)
+    size     = int(min(height/(2*nFreq+1), width/5))
+    for i in range(nFreq):
+        pos1 = [int((2*i+1)*width/(2*nFreq + 1)), int(height/5)] 
+        pos2 = [int((2*i+1)*width/(2*nFreq + 1)), int(height*3/5)]
+        position1.append(pos1)
+        position2.append(pos2)
+    # game begins here !!!!
+    gui = GUI(tRun=-1.0,
+            screenType='float',
+            monitorRate=60.0,
+            screenHeight=600,
+            screenWidth=800)
+    for i in range(nFreq):
+        gui.createStimulusSquareWave(
+                position=position1[i],
+                size=size,
+                stiFreq=freq[i],
+                dutyfactor=0.5,
+                tBegin=0.001,
+                stimulusName='SquareWave'+str(i+1))
+        gui.createStimulusSinWave(
+                position=position2[i],
+                size=size,
+                stiFreq=freq[i],
+                amp=255,
+                offset=0,
+                tBegin=0.001,
+                stimulusName='SinWave'+str(i+1))
+    gui.showStimulusInfo()
+    gui.displayGUI(quitKey='q')
+    return
+
 if __name__ == "__main__":
-    unitTest()
+#    unitTest()
+    demo()
     pass
 
