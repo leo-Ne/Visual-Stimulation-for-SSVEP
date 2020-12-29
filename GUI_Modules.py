@@ -63,7 +63,7 @@ class GUI:
         del canvas, x, y, RGB
         return
 
-    def creatStimulusSeries(self, position, size, stiFreq=10.0, dutyfactor=0.5, tBegin=0.001):
+    def creatStimulusSeries(self, position, size, stiFreq=10.0, dutyfactor=0.5, tBegin=0.001, stimulusName=None):
         """
         lFrame means the mounts of the pictures inclued in one stimulus.
         This function will create a sequence of lightness. The lightness sequence should be used in method addStimuls().
@@ -88,8 +88,9 @@ class GUI:
                 'tBegin'         : tBegin,              # stimulus firstly start. ms
                 'frameStepCnt'   : 0
                          }
-        stimulusName                = stimulusSeries['nStimulus']
-        stimulusSeries['nStimulus'] = stimulusName + 1
+        if stimulusName is None:
+            stimulusName                = str(stimulusSeries['nStimulus'])
+        stimulusSeries['nStimulus'] = stimulusSeries['nStimulus']+ 1
         stimulusSeries.update({stimulusName: stimulus})
         self._stimulusSeries        = stimulusSeries.copy()
         del stimulusSeries, tLight, tPeriod, tDark, lightness, lightnessSeries, timeSeries, position, size, stimulus
@@ -145,7 +146,8 @@ class GUI:
         tStart = time.perf_counter_ns() 
         while True:
             # Initialize the canvas buffer
-            tCurrent = int((time.perf_counter_ns() - tStart) / 10e6)
+            tCurrent = int((time.perf_counter_ns() - tStart) / 1e6)
+            print("\rtCurrent:", tCurrent, 'ms.', flush=True, end='')
             self._canvas = np.zeros_like(canvas)
             # write stimuluses into screen buffer.
             for i in range(nStimulus):
@@ -179,8 +181,8 @@ class GUI:
 
 def unitTest():
     gui = GUI(screenType='float',screenHeight=200,screenWidth=200)
-    gui.creatStimulusSeries([100, 100], None, 4.0, 0.5)
-    gui.creatStimulusSeries([60, 60], None, 60.0, 0.5)
+    gui.creatStimulusSeries([100, 100], None, 4.0, 0.5,1.0, 'Square')
+    gui.creatStimulusSeries([60, 60], None, 30.0, 0.5)
     gui.displayGUI()
     return 
 
