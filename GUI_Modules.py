@@ -10,6 +10,7 @@ import numpy as np
 import cv2  as cv
 import tkinter as tk
 import time
+from createStimulus import *
 
 class GUI:
     """
@@ -29,7 +30,9 @@ class GUI:
         self._colorSpace     = r'RGB'
         self._canvas         = None
         self._displayType    = screenType
-        self._stimulusSeries = {'nStimulus' : 0}
+        # initialize the stimulus infomation
+        self._stimulus       = Stimulus(stimulusNumber=0,monitorRate=monitorRate)
+        self._stimulusSeries =  self._stimulus._stimulusSeries
         # Initial assignment for Class properties
         display        = tk.Tk()
         display_width  = display.winfo_screenwidth()
@@ -45,6 +48,20 @@ class GUI:
         self._canvas=np.zeros([self._screenHeight, self._screenWidth], np.uint8)
         pass
 
+    def createStimulusSquareWave(self, position:list[int], size:int,
+            stiFreq=10.0, dutyfactor=0.5, tBegin=0.001, stimulusName=None):
+        """
+        lFrame means the mounts of the pictures inclued in one stimulus.
+        This function will create a sequence of lightness. The lightness sequence should be used in method addStimuls().
+        """
+        self._stimulus.createStimulusSquareWave(position,size,stiFreq,dutyfactor,tBegin,stimulusName)
+        return 
+
+    def createStimulusSinWave(self, position:list[int], size:int, 
+            stiFreq=10.0, amp=255, offset=0, tBegin=0.001, stimulusName=None):
+        self._stimulus.createStimulusSinWave(position,size,stiFreq,amp,offset,tBegin,stimulusName)
+        return 
+
     def addStimuls(self, x_position, y_position, lightness, size=None):
         """
         Stimulus will alter according to lightness. The lightness is limited from 0 to 255.
@@ -52,53 +69,21 @@ class GUI:
         """
         if  size is None:
             size = np.int(self._screenHeight / 10)
-        canvas = self._canvas
-        x      = x_position
-        y      = y_position
-        RGB    = (lightness, lightness, lightness)
+        canvas    = self._canvas
+        x         = x_position
+        y         = y_position
+        lightness = int(lightness)
+        RGB       = (lightness, lightness, lightness)
         cv.rectangle(canvas,(x, y), (x+size, y+size),RGB, -1)
         self._canvas = canvas
         del canvas, x, y, RGB
         return
 
-    def creatStimulusSeries(self, position, size, stiFreq=10.0, dutyfactor=0.5, tBegin=0.001, stimulusName=None):
-        """
-        lFrame means the mounts of the pictures inclued in one stimulus.
-        This function will create a sequence of lightness. The lightness sequence should be used in method addStimuls().
-        """
-        stimulusSeries  = self._stimulusSeries.copy()
-        framePeriod     = self._framePeriod
-        tLight          = int(dutyfactor * 1000.0 / stiFreq / framePeriod + 0.5) # ms
-        tPeriod         = int(1000.0 / stiFreq / framePeriod + 0.5)        # tPeriod ms in a period of a stimulus.
-        print(tPeriod)
-        tDark           = int(tPeriod - tLight)
-#        lightness       = 255
-        lightnessSeries = [255, 0]
-        timeSeries      = [tLight, tDark]
-        position        = position
-        size            = size
-        tBegin          = int(1000 * tBegin)
-        stimulus        = {
-                'timeSeries'     : timeSeries,
-                'lightnessSeries': lightnessSeries,
-                'position'       : position,
-                'size'           : size,
-                'tBegin'         : tBegin,              # stimulus firstly start. ms
-                'frameStepCnt'   : 0
-                         }
-        if stimulusName is None:
-            stimulusName                = str(stimulusSeries['nStimulus'])
-        stimulusSeries['nStimulus'] = stimulusSeries['nStimulus']+ 1
-        stimulusSeries.update({stimulusName: stimulus})
-        self._stimulusSeries        = stimulusSeries.copy()
-        del stimulusSeries, tLight, tPeriod, tDark, lightnessSeries, timeSeries, position, size, stimulus
-        return 
-
     def displayGUI(self, quitKey='q'):
         height          = self._screenWidth
         width           = self._screenWidth
         canvas          = self._canvas.copy()
-        stimulusSeries  = self._stimulusSeries.copy()
+        stimulusSeries  = self._stimulus._stimulusSeries.copy()
         framePeriod     = self._framePeriod
         ### default setting: dispaly UI occuping the screen ###
         print("Initializing GUI....")
@@ -134,12 +119,6 @@ class GUI:
         del keys, stimulusSeries
         #### debug codes, suggest that not delete it ###
         print("Loaded Stimulues:")
-        for i in range(nStimulus):
-            print('\t', i, 
-                    '\n\tposition:',positionMatrix[i], 
-                    '\n\tsize:',sizeMatrix[i],
-                    '\n\tlightnessSeries:', lightnessMatrix[i],
-                    '\n\ttimeSeries:',stayTimeMatrix[i])
         ### output stimulus to screen ###
         tStart = time.perf_counter_ns() 
         while True:
@@ -159,6 +138,7 @@ class GUI:
                     lightness    = lightnessMatrix[i][idx]
                     position     = positionMatrix[i]
                     size         = sizeMatrix[i]
+                    print(position, lightness, size)
                     self.addStimuls(position[0],position[1],lightness,size)
                     if frameStepCnt < stayTime:
                         frameStepCnt += 1
@@ -178,8 +158,21 @@ class GUI:
 
 def unitTest():
     gui = GUI(screenType='float',screenHeight=200,screenWidth=200)
-    gui.creatStimulusSeries([100, 100], None, 4.0, 0.5,1.0, 'Square')
-    gui.creatStimulusSeries([60, 60], None, 30.0, 0.5)
+    gui.createStimulusSquareWave(
+            position=[10,10],
+            size=10,
+            stiFreq=10.0,
+            dutyfactor=0.5,
+            tBegin=0.001,
+            stimulusName='SquareWave1')
+    gui.createStimulusSinWave(
+            position=[100,100],
+            size=10,
+            stiFreq=5.4,
+            amp=255,
+            offset=0,
+            tBegin=0.001,
+            stimulusName='SinWave1')
     gui.displayGUI('q')
     return 
 
