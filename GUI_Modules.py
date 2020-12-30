@@ -186,8 +186,8 @@ def demo():
     freq = [8., 9., 10., 11., 12., 13.]
     position1 = []
     position2 = []
-    width    = 1920
-    height   = 1080
+    width    = 800
+    height   = 600
     nFreq    = len(freq)
     size     = int(min(height/(2*nFreq+1), width/5))
     for i in range(nFreq):
@@ -225,4 +225,3 @@ if __name__ == "__main__":
 #    unitTest()
     demo()
     pass
-
